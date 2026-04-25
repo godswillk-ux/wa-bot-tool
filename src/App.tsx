@@ -69,9 +69,11 @@ ${contextStr}
 User Message: "${text}"
 Provide a natural, concise reply. Do not use generic AI-sounding intros. Just the reply.`;
 
-        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(prompt);
-        const reply = result.response.text().trim();
+        const result = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: prompt
+        });
+        const reply = result.text.trim();
         
         socket.emit(`wa.ai_response.${requestId}`, {
           reply,

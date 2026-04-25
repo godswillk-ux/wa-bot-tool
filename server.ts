@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 
 const authFolder = path.join(__dirname, 'wa_auth');
 const logger = pino({ level: 'silent' });
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Settings Management
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
@@ -668,7 +668,7 @@ const START_TIME = Date.now();
   app.use(vite.middlewares);
  
   httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`[Aura AI] Core active on port ${PORT}`);
   });
 }
 
