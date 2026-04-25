@@ -196,10 +196,10 @@ async function startServer() {
       browser: ["WhatsApp Bot", "Chrome", "1.0.0"],
       generateHighQualityLinkPreview: true,
       syncFullHistory: false,
-      retryRequestDelayMs: 250,
-      defaultQueryTimeoutMs: 60000,
-      connectTimeoutMs: 60000,
-      keepAliveIntervalMs: 30000,
+      retryRequestDelayMs: 500,
+      defaultQueryTimeoutMs: 120000,
+      connectTimeoutMs: 120000,
+      keepAliveIntervalMs: 60000,
       patchMessageBeforeSending: (message) => {
         const requiresPatch = !!(
           message.buttonsMessage ||
@@ -271,24 +271,28 @@ async function startServer() {
       
       if (connection === 'close') {
         const error = (lastDisconnect?.error as any)?.output?.payload?.message || lastDisconnect?.error?.message || '';
-        console.log('Connection closed:', error);
+        const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
+        console.log('Connection closed. Status:', statusCode, 'Reason:', error);
         
         if (error.includes('Bad MAC') || error.includes('Decryption failed')) {
           io.emit('wa.error', 'SESSION_CORRUPTED');
         }
 
-        const isTimeout = error.includes('QR refs attempts ended') || error.includes('Timed out');
-        const shouldReconnect = (lastDisconnect?.error as any)?.output?.statusCode !== DisconnectReason.loggedOut || isTimeout;
-        
-        console.log('Connection closed. Reason:', lastDisconnect?.error, ' | Reconnecting:', shouldReconnect);
+        const isTimeout = error.includes('QR refs attempts ended') || error.includes('Timed out') || statusCode === 408;
+        const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+        const shouldReconnect = !isLoggedOut;
         
         if (shouldReconnect) {
+          const delay = isTimeout ? 30000 : 5000;
           if (isTimeout) {
-            console.log('QR/Connection timed out. Forcing protocol reset...');
-            // Optional: purge auth folder if needed, but usually just reconnecting is enough to generate new QR
+            console.log(`Connection or QR timed out. Resetting in ${delay/1000}s...`);
+            io.emit('wa.status', 'timeout');
           }
-          connectToWhatsApp();
+          setTimeout(() => {
+            if (!isLoggedOut) connectToWhatsApp();
+          }, delay);
         } else {
+          console.log('Logged out. Not reconnecting.');
           io.emit('wa.status', 'disconnected');
         }
       } else if (connection === 'open') {
